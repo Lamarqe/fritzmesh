@@ -187,8 +187,11 @@ def updateLuaData():
             'useajax': '1', 'no_sidrenew': ''},
       headers={"Content-Type": "application/x-www-form-urlencoded"}
   ) as luaResponse:
-    luaJson = json.loads(luaResponse.text)
-    if (luaJson['sid'] == invalidSid):
+    try:
+      luaJson = json.loads(luaResponse.text)
+      if (luaJson['sid'] == invalidSid):
+        return False
+    except JSONDecodeError:
       return False
     else:
       luaJson['sid'] = bootstrapSid
