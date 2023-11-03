@@ -12,10 +12,10 @@ Functionalities offered:
 ## Configuration
 
 Edit `fritzmesh` to your needs:
- * fritzboxUsername: The username of your Fritz!Box
- * fritzboxPassword: Corresponding users password
- * fritzboxHost: Hostname or IP under which the Fritz!Box is reachable
- * fritzMeshPort: The local port of the hosting server under which the fritz mesh overview will be made available 
+ * `fritzboxUsername`: The username of your Fritz!Box
+ * `fritzboxPassword`: Corresponding users password
+ * `fritzboxHost`: Hostname or IP under which the Fritz!Box is reachable
+ * `fritzMeshPort`: The local port of the hosting server under which the fritz mesh overview will be made available 
 
 ## Installation
 
