@@ -1,6 +1,8 @@
 # fritzmesh
 Proxy daemon to show the Fritz!Box mesh overview outside of the regular Fritz!Box user interface
 
+![Screenshot](FritzMesh.jpg)
+
 Functionalities offered:
 
  * Extract the Fritz Mesh renderer from the Fritz!Box WebUI
