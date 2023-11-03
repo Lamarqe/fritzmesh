@@ -1,0 +1,4 @@
+fritzboxUsername = fritz1234
+fritzboxPassword = password
+fritzboxHost     = fritz.box
+fritzMeshPort    = 8765

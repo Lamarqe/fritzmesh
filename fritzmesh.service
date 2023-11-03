@@ -1,0 +1,16 @@
+[Unit]
+Description=FritzMesh
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/fritzmesh.py
+WorkingDirectory=/var/cache/fritzmesh
+KillSignal=SIGINT
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+
