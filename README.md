@@ -1,5 +1,6 @@
 # fritzmesh
 Proxy daemon to show the Fritz!Box mesh overview outside of the regular Fritz!Box user interface.
+<br/><br/>
 E.g. to include it in an Home Assistant Dashboard:
 
 ![Screenshot](FritzMesh.jpg)
