@@ -8,6 +8,7 @@ Functionalities offered:
  * Extract the Fritz Mesh renderer from the Fritz!Box WebUI
  * Modify some css / js parameters to make the overview appear in fullscreen
  * Cache the modified data locally
+ * Mesh status is updated every 5 seconds
 
 ## Configuration
 
