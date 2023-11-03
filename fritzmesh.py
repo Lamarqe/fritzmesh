@@ -114,24 +114,29 @@ class Handler(BaseHTTPRequestHandler):
   def do_GET(self):    
     responseHeaders, responseContent = getResponse(self.path)
 
-    self.send_response(HTTPStatus.OK)
-    key = "Content-type"
-    self.send_header(key, responseHeaders[key]);
-    key = "Content-length"
-    self.send_header(key, len(responseContent));
-    self.end_headers()
-    self.wfile.write(responseContent)
-    
+    try:
+      self.send_response(HTTPStatus.OK)
+      key = "Content-type"
+      self.send_header(key, responseHeaders[key]);
+      key = "Content-length"
+      self.send_header(key, len(responseContent));
+      self.end_headers()
+      self.wfile.write(responseContent)
+    except IOError:
+      pass
 
   def do_POST(self):    
-    if (self.path == '/data.lua'):
-      self.send_response(HTTPStatus.OK)
-      self.send_header('Content-Type', 'application/json; charset=utf-8')
-      self.end_headers()
-      with dataLock:
-        self.wfile.write(luaData)
-    else:
-      self.send_error(404, "File not found")
+    try:
+      if (self.path == '/data.lua'):
+        self.send_response(HTTPStatus.OK)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.end_headers()
+        with dataLock:
+          self.wfile.write(luaData)
+      else:
+        self.send_error(404, "File not found")
+    except IOError:
+      pass
 
 
 # Fritzbox login using PBKDF2 as described here:
@@ -191,7 +196,7 @@ def updateLuaData():
       luaJson = json.loads(luaResponse.text)
       if (luaJson['sid'] == invalidSid):
         return False
-    except JSONDecodeError:
+    except ValueError:
       return False
     else:
       luaJson['sid'] = bootstrapSid
