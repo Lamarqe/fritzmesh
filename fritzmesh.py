@@ -45,12 +45,11 @@ import configparser
 fritzboxUsername = ''
 fritzboxPassword = ''
 fritzboxHost     = ''
-fritzMeshPort    = 0
 
 invalidSid = "0000000000000000"
 entryUrls  = ("/", "/#homeNet")
-cacheFilename = '/var/cache/fritzmesh/cache.pickle'
-configFilename = '/etc/fritzmesh'
+
+sanitizationContentTypes = ("text/html; charset=utf-8", "text/css", "application/javascript;charset=utf-8")
 
 #see: https://stackoverflow.com/questions/34738611/how-can-i-use-python-to-change-css-attributes-of-an-html-document
 bootStrapConfigs = {
@@ -82,17 +81,31 @@ HeaderResponsePair = namedtuple('HeaderResponsePair', ['headers', 'content'])
 def fix(contentString, pattern, repl):
   return re.sub(pattern, repl, contentString.group(0), flags=re.S)
 
-def bootstrap(path, response):
-  if path not in bootStrapConfigs:
-    return response.content
-    
-  contentString = str(response.content, encoding=response.encoding)
-  for bsConfig in bootStrapConfigs[path]:
-    contentString = re.sub(bsConfig[0], lambda contentString: fix(contentString, bsConfig[1], bsConfig[2]), contentString, flags=re.S)
-  
-  return bytes(contentString, response.encoding)
+def sanitize(images, absolutePath):
+  return re.sub(r':"/', r':"' + absolutePath, images.group(0), flags=re.S)
 
-def getResponse(path):
+def bootstrap(path, ingressPath, contentString):
+  # sanitize all absolute links with ingress path ones
+  absolutePath = ingressPath  + '/'
+
+  contentString = re.sub(r'<script src="/', r'<script src="' + absolutePath, contentString, flags=re.S)
+  contentString = re.sub(r'from\s*"/', r' from "' + absolutePath, contentString, flags=re.S)
+  contentString = re.sub(r' href="/', r' href="' + absolutePath, contentString, flags=re.S)
+  contentString = re.sub(r':url\(/', r':url(' + absolutePath, contentString, flags=re.S)
+  contentString = re.sub(r'@import\s*"/', r'@import "' + absolutePath, contentString, flags=re.S)
+  contentString = re.sub(r';const script="/', r';const script="' + absolutePath, contentString, flags=re.S)
+  contentString = re.sub(r'"/?data.lua"', r'"' + absolutePath + r'data.lua"', contentString, flags=re.S)
+  contentString = re.sub(r'src:"/', r'src:"' + absolutePath, contentString, flags=re.S)
+  contentString = re.sub(r'jsl\.loadCss\("', r'jsl.loadCss("' + absolutePath, contentString, flags=re.S)
+  contentString = re.sub(r'(const images\s*=\s*\{(.*?)\})', lambda contentString: sanitize(contentString, absolutePath), contentString, flags=re.S)
+
+  if path in bootStrapConfigs:    
+    for bsConfig in bootStrapConfigs[path]:
+      contentString = re.sub(bsConfig[0], lambda contentString: fix(contentString, bsConfig[1], bsConfig[2]), contentString, flags=re.S)
+  
+  return contentString
+
+def getResponse(path, ingressPath):
   if path in entryUrls:
     path = "/?sid=" + bootstrapSid + "&lp=meshNet"
 
@@ -101,7 +114,13 @@ def getResponse(path):
 
   response = requests.get('http://' + fritzboxHost + path)
   
-  content = bootstrap(path, response)
+  if (path in bootStrapConfigs) or (response.headers["Content-type"] in sanitizationContentTypes):
+    contentString = str(response.content, encoding=response.encoding)
+    contentString = bootstrap(path, ingressPath, contentString)
+    content = bytes(contentString, response.encoding)
+  else:
+    content = response.content
+
   myPair = HeaderResponsePair(response.headers, content)
 
   cachedData[path] = myPair
@@ -111,8 +130,11 @@ class Handler(BaseHTTPRequestHandler):
   def log_request(code, size):
     pass
 
-  def do_GET(self):    
-    responseHeaders, responseContent = getResponse(self.path)
+  def do_GET(self):
+    ingressPath = self.headers.get('x-ingress-path')
+    if (ingressPath is None):
+      ingressPath = ''
+    responseHeaders, responseContent = getResponse(self.path, ingressPath)
 
     try:
       self.send_response(HTTPStatus.OK)
@@ -214,20 +236,33 @@ def luaThreadMain():
 
 def main():
   global bootstrapSid
-  global configFilename, cacheFilename, cachedData
+  global cachedData
   global fritzboxUsername, fritzboxPassword, fritzboxHost
 
   # load config
   try:
-    with open(configFilename, 'r') as f:
-      configString = "[DummyTop]\n" + f.read()
-      config = configparser.ConfigParser()
-      config.read_string(configString)
-      config = config['DummyTop']
-      fritzboxUsername = config['fritzboxUsername']
-      fritzboxPassword = config['fritzboxPassword']
-      fritzboxHost     = config['fritzboxHost']
-      fritzMeshPort    = config.getint('fritzMeshPort')
+    if '-hassio' in sys.argv[1:]:
+      configFilename = '/data/options.json'
+      fritzMeshPort    = 8099
+      cacheFilename = '/data/cache.pickle'
+      with open(configFilename, 'r') as hassConfigFile:
+        hassConfig = json.loads(hassConfigFile.read())
+        fritzboxUsername = hassConfig["Fritzbox username"]
+        fritzboxPassword = hassConfig["Fritzbox password"]
+        fritzboxHost     = hassConfig["fritzbox host"]
+    else:
+      configFilename = '/etc/fritzmesh'
+      fritzMeshPort  = 8765
+      cacheFilename  = '/var/cache/fritzmesh/cache.pickle'
+      with open(configFilename, 'r') as f:
+        configString = "[DummyTop]\n" + f.read()
+        config = configparser.ConfigParser()
+        config.read_string(configString)
+        config = config['DummyTop']
+        fritzboxUsername = config['fritzboxUsername']
+        fritzboxPassword = config['fritzboxPassword']
+        fritzboxHost     = config['fritzboxHost']
+        fritzMeshPort    = config.getint('fritzMeshPort')
   except (IOError, KeyError):
     print("Could not read config file '" + configFilename + "'. Exiting.", file=sys.stderr)
     return
@@ -268,7 +303,6 @@ def main():
     
   # store the cache data
   with open(cacheFilename, 'wb') as f:
-    # Pickle the 'data' dictionary using the highest protocol available.
     pickle.dump(cachedData, f, pickle.HIGHEST_PROTOCOL)
 
 if __name__ == '__main__':
