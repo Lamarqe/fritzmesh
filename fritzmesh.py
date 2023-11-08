@@ -1,33 +1,30 @@
 #!/usr/bin/env python3
 
-# MIT License
-# 
-# Copyright (c) 2023 Lamarqe
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
+"""
+MIT License
 
+Copyright (c) 2023 Lamarqe
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
 
 import os
-import http.server
-import socketserver
-from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler
 import requests
 from xml.etree import ElementTree
 import hashlib
@@ -41,6 +38,7 @@ import pickle
 from urllib.parse import urlparse, parse_qsl
 import sys
 import configparser
+from aiohttp import web
 
 fritzboxUsername = ''
 fritzboxPassword = ''
@@ -105,60 +103,56 @@ def bootstrap(path, ingressPath, contentString):
   
   return contentString
 
-def getResponse(path, ingressPath):
-  if path in entryUrls:
-    path = "/?sid=" + bootstrapSid + "&lp=meshNet"
+def getResponse(url, ingressPath):
+  if url.path in entryUrls:
+    requestPath = "/?sid=" + bootstrapSid + "&lp=meshNet"
+  else:
+    requestPath = url.path_qs
 
-  if path in cachedData:
-    return cachedData[path]
+  if requestPath in cachedData:
+    return cachedData[requestPath]
 
-  response = requests.get('http://' + fritzboxHost + path)
+  response = requests.get('http://' + fritzboxHost + requestPath)
   
-  if (path in bootStrapConfigs) or (response.headers["Content-type"] in sanitizationContentTypes):
+  if (requestPath in bootStrapConfigs) or (response.headers["Content-type"] in sanitizationContentTypes):
     contentString = str(response.content, encoding=response.encoding)
-    contentString = bootstrap(path, ingressPath, contentString)
+    contentString = bootstrap(requestPath, ingressPath, contentString)
     content = bytes(contentString, response.encoding)
   else:
     content = response.content
 
   myPair = HeaderResponsePair(response.headers, content)
 
-  cachedData[path] = myPair
+  cachedData[requestPath] = myPair
   return myPair
 
-class Handler(BaseHTTPRequestHandler):
-  def log_request(code, size):
-    pass
+async def do_GET(request):
+    global luaData, dataLock
 
-  def do_GET(self):
-    ingressPath = self.headers.get('x-ingress-path')
+    ingressPath = request.headers.get('x-ingress-path')
     if (ingressPath is None):
       ingressPath = ''
-    responseHeaders, responseContent = getResponse(self.path, ingressPath)
+    responseHeaders, responseContent = getResponse(request.url, ingressPath)
 
     try:
-      self.send_response(HTTPStatus.OK)
-      key = "Content-type"
-      self.send_header(key, responseHeaders[key]);
-      key = "Content-length"
-      self.send_header(key, len(responseContent));
-      self.end_headers()
-      self.wfile.write(responseContent)
+      contenType = responseHeaders["Content-type"].split(';')[0]
+      return web.Response(
+          body = responseContent,
+          content_type = contenType)
     except IOError:
       pass
 
-  def do_POST(self):    
-    try:
-      if (self.path == '/data.lua'):
-        self.send_response(HTTPStatus.OK)
-        self.send_header('Content-Type', 'application/json; charset=utf-8')
-        self.end_headers()
-        with dataLock:
-          self.wfile.write(luaData)
-      else:
-        self.send_error(404, "File not found")
-    except IOError:
-      pass
+async def do_POST(request):    
+  with dataLock:
+    return web.Response(
+        body = luaData,
+        content_type = 'application/json')
+
+async def on_prepare(request, response):
+  if (request.url.path == '/data.lua'):
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Expires']       = '-1'
+    response.headers['Pragma']        = 'no-cache'
 
 
 # Fritzbox login using PBKDF2 as described here:
@@ -167,7 +161,7 @@ def updateLogin():
   global currentSid
   
   response = requests.get('http://' + fritzboxHost + '/login_sid.lua?version=2&sid=' + currentSid)
-  if response.status_code == HTTPStatus.OK:
+  if response.status_code == 200:
     root = ElementTree.fromstring(response.content)
     currentSid = root.find("SID").text
 
@@ -206,7 +200,7 @@ def updateLogin():
 
 def updateLuaData():
   global currentSid
-  global luaData
+  global luaData, dataLock
   with requests.post(
       'http://' + fritzboxHost + '/data.lua',
       data={'xhr': '1', 'sid': currentSid, 'lang': 'de', 'page': 'homeNet',
@@ -293,13 +287,18 @@ def main():
   threading.Thread(target=luaThreadMain, daemon=True).start()
 
   # start the webserver
-  httpd = http.server.HTTPServer(('', fritzMeshPort), Handler)
+  httpd = web.Application()
+  httpd.add_routes([web.get('/{tail:.*}', do_GET),
+                    web.post('/data.lua', do_POST)])
+  httpd.on_response_prepare.append(on_prepare)
+
   try:
-    httpd.serve_forever()
+    web.run_app(httpd, port = fritzMeshPort)
   except KeyboardInterrupt:
     pass
-  finally:
-    httpd.shutdown()
+#  finally:
+#    await app.shutdown()
+#    await app.cleanup()
     
   # store the cache data
   with open(cacheFilename, 'wb') as f:
