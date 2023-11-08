@@ -103,52 +103,50 @@ def bootstrap(path, ingressPath, contentString):
   
   return contentString
 
-def getResponse(url, ingressPath):
-  if url.path in entryUrls:
-    requestPath = "/?sid=" + bootstrapSid + "&lp=meshNet"
-  else:
-    requestPath = url.path_qs
+def getResponse(path, ingressPath):
+  if path in entryUrls:
+    path = "/?sid=" + bootstrapSid + "&lp=meshNet"
 
-  if requestPath in cachedData:
-    return cachedData[requestPath]
+  if path in cachedData:
+    return cachedData[path]
 
-  response = requests.get('http://' + fritzboxHost + requestPath)
+  response = requests.get('http://' + fritzboxHost + path)
   
-  if (requestPath in bootStrapConfigs) or (response.headers["Content-type"] in sanitizationContentTypes):
+  if (path in bootStrapConfigs) or (response.headers["Content-type"] in sanitizationContentTypes):
     contentString = str(response.content, encoding=response.encoding)
-    contentString = bootstrap(requestPath, ingressPath, contentString)
+    contentString = bootstrap(path, ingressPath, contentString)
     content = bytes(contentString, response.encoding)
   else:
     content = response.content
 
   myPair = HeaderResponsePair(response.headers, content)
 
-  cachedData[requestPath] = myPair
+  cachedData[path] = myPair
   return myPair
 
 async def do_GET(request):
-    global luaData, dataLock
+  ingressPath = request.headers.get('x-ingress-path')
+  if (ingressPath is None):
+    ingressPath = ''
+  responseHeaders, responseContent = getResponse(request.url.path_qs, ingressPath)
 
-    ingressPath = request.headers.get('x-ingress-path')
-    if (ingressPath is None):
-      ingressPath = ''
-    responseHeaders, responseContent = getResponse(request.url, ingressPath)
+  try:
+    contenType = responseHeaders["Content-type"].split(';')[0]
+    return web.Response(
+        body = responseContent,
+        content_type = contenType)
+  except IOError:
+    pass
 
-    try:
-      contenType = responseHeaders["Content-type"].split(';')[0]
-      return web.Response(
-          body = responseContent,
-          content_type = contenType)
-    except IOError:
-      pass
-
-async def do_POST(request):    
+async def handleLuaDataRequest(request):
+  global luaData, dataLock
   with dataLock:
     return web.Response(
         body = luaData,
         content_type = 'application/json')
 
-async def on_prepare(request, response):
+async def prepareLuaResponse(request, response):
+  # prevent browser cache of dynamic data
   if (request.url.path == '/data.lua'):
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['Expires']       = '-1'
@@ -161,7 +159,7 @@ def updateLogin():
   global currentSid
   
   response = requests.get('http://' + fritzboxHost + '/login_sid.lua?version=2&sid=' + currentSid)
-  if response.status_code == 200:
+  if response.status_code == requests.codes.ok:
     root = ElementTree.fromstring(response.content)
     currentSid = root.find("SID").text
 
@@ -289,16 +287,13 @@ def main():
   # start the webserver
   httpd = web.Application()
   httpd.add_routes([web.get('/{tail:.*}', do_GET),
-                    web.post('/data.lua', do_POST)])
-  httpd.on_response_prepare.append(on_prepare)
+                    web.post('/data.lua', handleLuaDataRequest)])
+  httpd.on_response_prepare.append(prepareLuaResponse)
 
   try:
     web.run_app(httpd, port = fritzMeshPort)
   except KeyboardInterrupt:
     pass
-#  finally:
-#    await app.shutdown()
-#    await app.cleanup()
     
   # store the cache data
   with open(cacheFilename, 'wb') as f:
