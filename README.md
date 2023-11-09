@@ -3,7 +3,7 @@ Proxy daemon to show the Fritz!Box mesh overview outside of the regular Fritz!Bo
 <br/><br/>
 E.g. to include it in an Home Assistant Dashboard:
 
-![Screenshot](FritzMesh.jpg)
+![Screenshot](/FritzMesh.jpg)
 
 Functionalities offered:
 
