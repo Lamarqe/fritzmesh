@@ -4,15 +4,13 @@ Home Assistant addon to include the Fritz!Box mesh overview in Home Assistant
 
 ![Screenshot](https://github.com/Lamarqe/fritzmesh/raw/main/fritzmesh_addon/screenshot.jpg)
 
-Functionalities offered:
+Functionalities included:
 
  * Modify some css / js parameters to make the overview appear in fullscreen
  * Mesh status is updated every 5 seconds
 
 ## Installation
 
-Besides Python 3.11, there are no additional dependencies.
-To install:
  * navigate to `Configuration -> Addons, Backups & Supervisor -> Add-on Store`, select `Repositories` in the menu that appears when selecting the 3 dots on top right
  * Add `https://github.com/Lamarqe/fritzmesh` as a new repository
  * Afterwards, Fritz Mesh can be selected from the list of available Add-ons
