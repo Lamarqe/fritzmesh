@@ -1,0 +1,5 @@
+{
+  name: "Home Assistant Fritz Mesh Add-on"
+  url: https://github.com/Lamarqe/fritzmesh/
+  maintainer: Lamarqe <https://github.com/Lamarqe>
+}
