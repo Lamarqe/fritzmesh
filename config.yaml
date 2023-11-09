@@ -1,0 +1,21 @@
+name: "Fritz Mesh"
+description: "FritzMesh - live view of you Fritz!Box Mesh network"
+version: "1.0.0"
+slug: "fritzmesh"
+init: false
+ingress: true
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+startup: services
+options:
+  Fritzbox username: ""
+  Fritzbox password: ""
+  fritzbox host:     "fritz.box"
+schema:
+  Fritzbox username: str
+  Fritzbox password: str
+  fritzbox host:     str
