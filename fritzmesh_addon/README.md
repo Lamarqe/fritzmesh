@@ -2,7 +2,7 @@
 Home Assistant addon to include the Fritz!Box mesh overview in Home Assistant
 <br/><br/>
 
-![Screenshot](screenshot.jpg)
+![Screenshot](https://github.com/Lamarqe/fritzmesh/raw/main/fritzmesh_addon/screenshot.jpg)
 
 Functionalities offered:
 
