@@ -89,7 +89,8 @@ def bootstrap(path, ingressPath, contentString):
   contentString = re.sub(r'<script src="/', r'<script src="' + absolutePath, contentString, flags=re.S)
   contentString = re.sub(r'from\s*"/', r' from "' + absolutePath, contentString, flags=re.S)
   contentString = re.sub(r' href="/', r' href="' + absolutePath, contentString, flags=re.S)
-  contentString = re.sub(r':url\(/', r':url(' + absolutePath, contentString, flags=re.S)
+  contentString = re.sub(r':\s*url\(/', r':url(' + absolutePath, contentString, flags=re.S)
+  contentString = re.sub(r':\s*url\(\'/', r": url('" + absolutePath, contentString, flags=re.S)
   contentString = re.sub(r'@import\s*"/', r'@import "' + absolutePath, contentString, flags=re.S)
   contentString = re.sub(r';const script="/', r';const script="' + absolutePath, contentString, flags=re.S)
   contentString = re.sub(r'"/?data.lua"', r'"' + absolutePath + r'data.lua"', contentString, flags=re.S)
@@ -260,15 +261,16 @@ def main():
     return
 
   # load previously cached data
-  try:
-    with open(cacheFilename, 'rb') as f:
-      cachedData = pickle.load(f)
-      for key in cachedData:
-        if key.startswith('/?sid='):
-          query = dict(parse_qsl(urlparse(key).query))
-          bootstrapSid = query['sid']
-  except IOError:
-    pass
+  if not '-nocache' in sys.argv[1:]:
+    try:
+      with open(cacheFilename, 'rb') as f:
+        cachedData = pickle.load(f)
+        for key in cachedData:
+          if key.startswith('/?sid='):
+            query = dict(parse_qsl(urlparse(key).query))
+            bootstrapSid = query['sid']
+    except IOError:
+      pass
 
   # get a valid login and sid from Fritzbox
   mySid = updateLogin()
@@ -296,8 +298,9 @@ def main():
     pass
     
   # store the cache data
-  with open(cacheFilename, 'wb') as f:
-    pickle.dump(cachedData, f, pickle.HIGHEST_PROTOCOL)
+  if not '-nocache' in sys.argv[1:]:
+    with open(cacheFilename, 'wb') as f:
+      pickle.dump(cachedData, f, pickle.HIGHEST_PROTOCOL)
 
 if __name__ == '__main__':
   main()
