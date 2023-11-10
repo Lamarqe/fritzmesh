@@ -45,7 +45,7 @@ fritzboxPassword = ''
 fritzboxHost     = ''
 
 invalidSid = "0000000000000000"
-entryUrls  = ("/", "/#homeNet")
+entryUrls  = ("/", "/#homeNet", "/start")
 
 sanitizationContentTypes = ("text/html; charset=utf-8", "text/css", "application/javascript;charset=utf-8")
 
@@ -96,6 +96,7 @@ def bootstrap(path, ingressPath, contentString):
   contentString = re.sub(r'"/?data.lua"', r'"' + absolutePath + r'data.lua"', contentString, flags=re.S)
   contentString = re.sub(r'src:"/', r'src:"' + absolutePath, contentString, flags=re.S)
   contentString = re.sub(r'jsl\.loadCss\("', r'jsl.loadCss("' + absolutePath, contentString, flags=re.S)
+  contentString = re.sub(r'"/start"', r'"' + absolutePath + r'start"', contentString, flags=re.S)
   contentString = re.sub(r'(const images\s*=\s*\{(.*?)\})', lambda contentString: sanitize(contentString, absolutePath), contentString, flags=re.S)
 
   if path in bootStrapConfigs:    
