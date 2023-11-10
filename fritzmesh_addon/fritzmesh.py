@@ -97,6 +97,7 @@ def bootstrap(path, ingressPath, contentString):
   contentString = re.sub(r'src:"/', r'src:"' + absolutePath, contentString, flags=re.S)
   contentString = re.sub(r'jsl\.loadCss\("', r'jsl.loadCss("' + absolutePath, contentString, flags=re.S)
   contentString = re.sub(r'"/start"', r'"' + absolutePath + r'start"', contentString, flags=re.S)
+  contentString = re.sub(r'logoutWarning:true', r'logoutWarning:false', contentString, flags=re.S)
   contentString = re.sub(r'(const images\s*=\s*\{(.*?)\})', lambda contentString: sanitize(contentString, absolutePath), contentString, flags=re.S)
 
   if path in bootStrapConfigs:    
