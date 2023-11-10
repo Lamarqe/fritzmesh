@@ -20,8 +20,8 @@ Functionalities included:
 
 Following configuration is required:
  * `Fritzbox username`: The username of your Fritz!Box. (Hint for being on the safe side: Create a new user without any permissions, just for the Add-on use-case)
- * `fritzboxPassword`: Corresponding users password
- * `fritzboxHost`: Hostname or IP under which the Fritz!Box is reachable (Default: fritz.box, should work for most setups)
+ * `Fritzbox password`: Corresponding users password
+ * `fritzbox host`: Hostname or IP under which the Fritz!Box is reachable (Default: fritz.box. This should work just fine for most setups)
 
 
 
