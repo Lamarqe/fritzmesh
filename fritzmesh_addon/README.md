@@ -15,6 +15,7 @@ Functionalities included:
  * Add `https://github.com/Lamarqe/fritzmesh` as a new repository
  * Afterwards, Fritz Mesh can be selected from the list of available Add-ons
  * Before starting first time, enter fritzbox access parameters.
+ * Select the option to include it in Home Assistants side bar and a new entry "network" will appear. 
 
 ## Configuration
 
