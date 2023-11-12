@@ -4,6 +4,8 @@ version: "1.0.0"
 slug: "fritzmesh"
 init: false
 ingress: true
+panel_title: Network
+panel_icon: mdi:lan
 arch:
   - aarch64
   - amd64
