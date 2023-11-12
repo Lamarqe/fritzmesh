@@ -6,7 +6,7 @@ Home Assistant addon to include the Fritz!Box mesh overview in Home Assistant
 
 Functionalities included:
 
- * Modify some css / js parameters to make the overview appear in fullscreen
+ * Modify some css / js parameters to make the overview appear in fullscreen, irrespective of the available resolution
  * Mesh status is updated every 5 seconds
 
 ## Installation
