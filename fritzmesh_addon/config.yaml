@@ -1,5 +1,5 @@
 name: "Fritz Mesh"
-description: "FritzMesh - live view of you Fritz!Box Mesh network"
+description: "FritzMesh - live view of your Fritz!Box Mesh network"
 version: "1.0.1"
 slug: "fritzmesh"
 init: false
