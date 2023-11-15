@@ -46,6 +46,7 @@ fritzboxHost     = ''
 
 invalidSid = "0000000000000000"
 entryUrls  = ("/", "/#homeNet", "/start")
+INGRESSREP = '__INGRESSPATH__'
 
 sanitizationContentTypes = ("text/html; charset=utf-8", "text/css", "application/javascript;charset=utf-8")
 
@@ -79,26 +80,24 @@ HeaderResponsePair = namedtuple('HeaderResponsePair', ['headers', 'content'])
 def fix(contentString, pattern, repl):
   return re.sub(pattern, repl, contentString.group(0), flags=re.S)
 
-def sanitize(images, absolutePath):
-  return re.sub(r':"/', r':"' + absolutePath, images.group(0), flags=re.S)
+def sanitize(images, INGRESSREP):
+  return re.sub(r':"/', r':"' + INGRESSREP, images.group(0), flags=re.S)
 
-def bootstrap(path, ingressPath, contentString):
+def bootstrap(path, contentString):
   # sanitize all absolute links with ingress path ones
-  absolutePath = ingressPath  + '/'
-
-  contentString = re.sub(r'<script src="/', r'<script src="' + absolutePath, contentString, flags=re.S)
-  contentString = re.sub(r'from\s*"/', r' from "' + absolutePath, contentString, flags=re.S)
-  contentString = re.sub(r' href="/', r' href="' + absolutePath, contentString, flags=re.S)
-  contentString = re.sub(r':\s*url\(/', r':url(' + absolutePath, contentString, flags=re.S)
-  contentString = re.sub(r':\s*url\(\'/', r": url('" + absolutePath, contentString, flags=re.S)
-  contentString = re.sub(r'@import\s*"/', r'@import "' + absolutePath, contentString, flags=re.S)
-  contentString = re.sub(r';const script="/', r';const script="' + absolutePath, contentString, flags=re.S)
-  contentString = re.sub(r'"/?data.lua"', r'"' + absolutePath + r'data.lua"', contentString, flags=re.S)
-  contentString = re.sub(r'src:"/', r'src:"' + absolutePath, contentString, flags=re.S)
-  contentString = re.sub(r'jsl\.loadCss\("', r'jsl.loadCss("' + absolutePath, contentString, flags=re.S)
-  contentString = re.sub(r'"/start"', r'"' + absolutePath + r'start"', contentString, flags=re.S)
+  contentString = re.sub(r'<script src="/', r'<script src="' + INGRESSREP, contentString, flags=re.S)
+  contentString = re.sub(r'from\s*"/', r' from "' + INGRESSREP, contentString, flags=re.S)
+  contentString = re.sub(r' href="/', r' href="' + INGRESSREP, contentString, flags=re.S)
+  contentString = re.sub(r':\s*url\(/', r':url(' + INGRESSREP, contentString, flags=re.S)
+  contentString = re.sub(r':\s*url\(\'/', r": url('" + INGRESSREP, contentString, flags=re.S)
+  contentString = re.sub(r'@import\s*"/', r'@import "' + INGRESSREP, contentString, flags=re.S)
+  contentString = re.sub(r';const script="/', r';const script="' + INGRESSREP, contentString, flags=re.S)
+  contentString = re.sub(r'"/?data.lua"', r'"' + INGRESSREP + r'data.lua"', contentString, flags=re.S)
+  contentString = re.sub(r'src:"/', r'src:"' + INGRESSREP, contentString, flags=re.S)
+  contentString = re.sub(r'jsl\.loadCss\("', r'jsl.loadCss("' + INGRESSREP, contentString, flags=re.S)
+  contentString = re.sub(r'"/start"', r'"' + INGRESSREP + r'start"', contentString, flags=re.S)
   contentString = re.sub(r'logoutWarning:true', r'logoutWarning:false', contentString, flags=re.S)
-  contentString = re.sub(r'(const images\s*=\s*\{(.*?)\})', lambda contentString: sanitize(contentString, absolutePath), contentString, flags=re.S)
+  contentString = re.sub(r'(const images\s*=\s*\{(.*?)\})', lambda contentString: sanitize(contentString, INGRESSREP), contentString, flags=re.S)
 
   if path in bootStrapConfigs:    
     for bsConfig in bootStrapConfigs[path]:
@@ -106,7 +105,7 @@ def bootstrap(path, ingressPath, contentString):
   
   return contentString
 
-def getResponse(path, ingressPath):
+def getResponse(path):
   if path in entryUrls:
     path = "/?sid=" + bootstrapSid + "&lp=meshNet"
 
@@ -117,8 +116,8 @@ def getResponse(path, ingressPath):
   
   if (path in bootStrapConfigs) or (response.headers["Content-type"] in sanitizationContentTypes):
     contentString = str(response.content, encoding=response.encoding)
-    contentString = bootstrap(path, ingressPath, contentString)
-    content = bytes(contentString, response.encoding)
+    contentString = bootstrap(path, contentString)
+    content = bytes(contentString, 'utf-8')
   else:
     content = response.content
 
@@ -128,10 +127,17 @@ def getResponse(path, ingressPath):
   return myPair
 
 async def do_GET(request):
-  ingressPath = request.headers.get('x-ingress-path')
-  if (ingressPath is None):
-    ingressPath = ''
-  responseHeaders, responseContent = getResponse(request.url.path_qs, ingressPath)
+  responseHeaders, responseContent = getResponse(request.url.path_qs)
+  
+  if responseHeaders["Content-type"] in sanitizationContentTypes:
+    ingressPath = request.headers.get('x-ingress-path')
+    if ingressPath is None:
+      ingressPath = ''
+    ingressPath += '/'
+    
+    responseString  = str(responseContent, 'utf-8')
+    responseString  = responseString.replace(INGRESSREP, ingressPath)
+    responseContent = bytes(responseString, 'utf-8')
 
   try:
     contenType = responseHeaders["Content-type"].split(';')[0]
