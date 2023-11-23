@@ -23,6 +23,7 @@ Edit `fritzmesh` to your needs:
 ## Installation
 
 Additionally to Python 3 itself, Fritz Mesh uses the libraries Requests and AIOHTTP.
+
 To install Fritz Mesh:
  * Clone or download the project.
  * Install, using `sudo sh ./make_install`
