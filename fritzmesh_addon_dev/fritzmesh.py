@@ -166,6 +166,7 @@ async def prepareLuaResponse(request, response):
 # https://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/AVM_Technical_Note_-_Session_ID_deutsch_2021-05-03.pdf
 def updateLogin():
   global currentSid
+  print('updateLogin()', file=sys.stdout)
   
   response = requests.get('http://' + fritzboxHost + '/login_sid.lua?version=2&sid=' + currentSid)
   if response.status_code == requests.codes.ok:
@@ -265,7 +266,7 @@ def main():
         fritzboxHost     = config['fritzboxHost']
         fritzMeshPort    = config.getint('fritzMeshPort')
   except (IOError, KeyError):
-    print("Could not read config file '" + configFilename + "'. Exiting.", file=sys.stderr)
+    print("Could not read config file '" + configFilename + "'. Exiting.", file=sys.stdout)
     return
 
   # load previously cached data
@@ -283,7 +284,7 @@ def main():
   # get a valid login and sid from Fritzbox
   mySid = updateLogin()
   if (mySid == invalidSid):
-    print("Could not access Fritzbox. Exiting.", file=sys.stderr)
+    print("Could not access Fritzbox. Exiting.", file=sys.stdout)
     return
     
   if (bootstrapSid == invalidSid):

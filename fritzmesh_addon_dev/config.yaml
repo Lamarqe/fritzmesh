@@ -1,5 +1,5 @@
 name: "Fritz Mesh Dev"
-description: "FritzMesh - live view of your Fritz!Box Mesh network"
+description: "FritzMesh - Development playground"
 version: "0.1.0"
 slug: "fritzmesh_dev"
 init: false
