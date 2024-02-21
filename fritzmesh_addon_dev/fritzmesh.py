@@ -166,7 +166,7 @@ async def prepareLuaResponse(request, response):
 # https://avm.de/fileadmin/user_upload/Global/Service/Schnittstellen/AVM_Technical_Note_-_Session_ID_deutsch_2021-05-03.pdf
 def updateLogin():
   global currentSid
-  print('updateLogin()', file=sys.stderr)
+  print('updateLogin()', datetime.now(), file=sys.stderr)
   
   response = requests.get('http://' + fritzboxHost + '/login_sid.lua?version=2&sid=' + currentSid)
   if response.status_code == requests.codes.ok:
@@ -174,6 +174,7 @@ def updateLogin():
     currentSid = root.find("SID").text
 
     if currentSid != invalidSid:
+      print('old SID is still valid:', currentSid, file=sys.stderr)
       return currentSid
     else:
       challenge = root.find("Challenge").text
@@ -200,9 +201,11 @@ def updateLogin():
       ) as sidResponse:
         root = ElementTree.fromstring(sidResponse.text)
         currentSid = root.find("SID").text
+        print('created new sid:', currentSid, file=sys.stderr)
         return currentSid
   else:
     currentSid = invalidSid
+    print('failed to update sid, setting to invalid.', file=sys.stderr)
     return currentSid
 
 
