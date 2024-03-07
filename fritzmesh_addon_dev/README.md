@@ -11,7 +11,7 @@ Functionalities included:
 
 ## Installation
 
- * navigate to `Configuration -> Addons, Backups & Supervisor -> Add-on Store`, select `Repositories` in the menu that appears when selecting the 3 dots on top right
+ * navigate to `Configuration -> Addons -> Add-on Store`, select `Repositories` in the menu that appears when selecting the 3 dots on top right
  * Add `https://github.com/Lamarqe/fritzmesh` as a new repository
  * Afterwards, Fritz Mesh can be selected from the list of available Add-ons
  * Before starting first time, enter fritzbox access parameters.
