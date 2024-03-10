@@ -108,7 +108,7 @@ def bootstrap(path, contentString):
 
 def getResponse(path):
   if path in entryUrls:
-    path = "/?sid=" + bootstrapSid + "&lp=meshNet"
+    path = "/?sid=" + currentSid + "&lp=meshNet"
 
   if path in cachedData:
     return cachedData[path]
