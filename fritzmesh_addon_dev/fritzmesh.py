@@ -108,7 +108,7 @@ def bootstrap(path, contentString):
 
 def getResponse(path):
   if path in entryUrls:
-    path = "/?sid=" + currentSid + "&lp=meshNet"
+    path = "/?sid=" + bootstrapSid + "&lp=meshNet"
 
   if path in cachedData:
     return cachedData[path]
@@ -295,6 +295,9 @@ def main():
     # we got a valid sid for the first time. 
     bootstrapSid = mySid
 
+  # make sure main page is cached with bootstrap SID
+  getResponse('/')
+  
   # fill initial mesh data and start polling
   updateLuaData()
   threading.Thread(target=luaThreadMain, daemon=True).start()
