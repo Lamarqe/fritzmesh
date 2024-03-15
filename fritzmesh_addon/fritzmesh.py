@@ -290,6 +290,9 @@ def main():
     # we got a valid sid for the first time. 
     bootstrapSid = mySid
 
+  # make sure main page is cached with bootstrap SID
+  getResponse('/')
+
   # fill initial mesh data and start polling
   updateLuaData()
   threading.Thread(target=luaThreadMain, daemon=True).start()
