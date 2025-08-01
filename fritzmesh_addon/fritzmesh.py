@@ -156,7 +156,7 @@ async def handleLuaDataRequest(request):
 
 async def prepareLuaResponse(request, response):
   # prevent browser cache of dynamic data
-  if (request.url.path == '/data.lua'):
+  if (request.rel_url.path == '/data.lua'):
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['Expires']       = '-1'
     response.headers['Pragma']        = 'no-cache'
